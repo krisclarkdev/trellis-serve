@@ -24,8 +24,8 @@ docker pull ghcr.io/0xsero/sglang-exl3:v0.7.0-ampere@sha256:c8922bd7256caf1b273a
 ```
 
 The launch arguments that were tested are in the registry recipes:
-[Qwen3.8-27B](https://github.com/0xSero/local-ai-registry/blob/main/data/registry/recipe/qwen38-27b-exl3-3bpw-mtp-vision-rtx3090-sglang-tp1.json)
-and [Qwen3.6-35B-A3B](https://github.com/0xSero/local-ai-registry/blob/main/data/registry/recipe/qwen36-35b-a3b-exl3-3bpw-mtp-vision-rtx3090-sglang-tp1.json).
+[Qwen3.8-27B](https://github.com/sybil-solutions/local-ai-registry/blob/main/data/registry/recipe/qwen38-27b-exl3-3bpw-mtp-vision-rtx3090-sglang-tp1.json)
+and [Qwen3.6-35B-A3B](https://github.com/sybil-solutions/local-ai-registry/blob/main/data/registry/recipe/qwen36-35b-a3b-exl3-3bpw-mtp-vision-rtx3090-sglang-tp1.json).
 To build from source, see [`cuda/README.md`](cuda/README.md).
 
 ### Intel Arc Pro B70 (vLLM or SGLang)
@@ -35,7 +35,7 @@ IMG=ghcr.io/0xsero/exl3xpu@sha256:21412bdd7535e9c653eeb3d099dce3bc79a83d440def2c
 ```
 
 The run command, flags and GPU selection are in [`xpu/README.md`](xpu/README.md), and the tested recipe is
-[in the registry](https://github.com/0xSero/local-ai-registry/blob/main/data/registry/recipe/qwen38-27b-exl3-4bpw-arcb70-vllm-exl3xpu-tp1.json).
+[in the registry](https://github.com/sybil-solutions/local-ai-registry/blob/main/data/registry/recipe/qwen38-27b-exl3-4bpw-arcb70-vllm-exl3xpu-tp1.json).
 
 ### Other GPUs
 
