@@ -2,9 +2,10 @@
 
 ![Qwen3.8-27B EXL3 on one Intel Arc Pro B70](docs/banner/banner.png)
 
-Folded in from [sybil-solutions/exl3xpu](https://github.com/sybil-solutions/exl3xpu) (archived): same files, with the
-two standalone adaptations replaced here — `tests/test_xpu_kernels.py` imports `trellis_core`, and `docker/Dockerfile` builds
-from the repository root. The standalone repository keeps the `exl3xpu.ref` variants and its own image
+Folded in from [sybil-solutions/exl3xpu](https://github.com/sybil-solutions/exl3xpu) (archived): 40 shared files are
+byte-identical, two are adapted here (`tests/test_xpu_kernels.py` imports `trellis_core`; `docker/Dockerfile` builds from the
+repository root), this folder adds the SGLang plugin and the B70 scripts, and `LICENSE`, `.dockerignore`, `exl3xpu/ref.py` and
+the release workflow stay only in the archived repository. The archived repository keeps its own image
 (`ghcr.io/0xsero/exl3xpu@sha256:21412bdd7535e9c653eeb3d099dce3bc79a83d440def2cd9556111c79c870fa8`), which the
 `qwen38-27b-exl3-4bpw-arcb70-vllm-exl3xpu-tp1` registry recipe pins.
 

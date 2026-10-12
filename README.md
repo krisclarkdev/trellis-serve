@@ -74,12 +74,15 @@ CPU tests: `cd core && python -m pytest`.
 
 ## exl3xpu
 
-`xpu/` is the standalone [exl3xpu](https://github.com/sybil-solutions/exl3xpu) repository folded in: the
-vLLM XPU plugin, ESIMD kernels, tests and benchmarks are the same files, and the two that differ here are the
-adapted ones — `tests/test_xpu_kernels.py` imports `trellis_core` instead of the standalone `exl3xpu.ref`, and
-`docker/Dockerfile` builds from this repository root so the image also carries `core/`. The standalone repository is
-archived (read-only, still fetchable by commit) and keeps the standalone variants, including the image
-`ghcr.io/0xsero/exl3xpu@sha256:21412bdd…` that the B70 registry recipe pins.
+`xpu/` is the standalone [exl3xpu](https://github.com/sybil-solutions/exl3xpu) repository folded in. The 40 files
+they share are byte-identical (blob SHAs compared), including the vLLM XPU plugin, the ESIMD kernels, the tests and the
+benchmarks. Two files differ here, both adapted: `tests/test_xpu_kernels.py` imports `trellis_core` instead of the standalone
+`exl3xpu.ref`, and `docker/Dockerfile` builds from this repository root so the image also carries `core/`. `xpu/` adds
+files the standalone repository never had (the SGLang XPU plugin, the B70 launch scripts under `scripts/`, the corpus and
+kernel benches, `docs/SGLANG.md`). Four paths live only in the archived repository: `LICENSE`, `.dockerignore`,
+`exl3xpu/ref.py` and its `release-image` workflow. The archived repository is read-only and still fetchable by commit, and
+keeps the standalone variants, including the image `ghcr.io/0xsero/exl3xpu@sha256:21412bdd…` that the B70 registry recipe
+pins.
 
 ## Credits
 
