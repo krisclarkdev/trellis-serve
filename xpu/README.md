@@ -2,6 +2,12 @@
 
 ![Qwen3.8-27B EXL3 on one Intel Arc Pro B70](docs/banner/banner.png)
 
+Folded in from [sybil-solutions/exl3xpu](https://github.com/sybil-solutions/exl3xpu) (archived): same files, with the
+two standalone adaptations replaced here — `tests/test_xpu_kernels.py` imports `trellis_core`, and `docker/Dockerfile` builds
+from the repository root. The standalone repository keeps the `exl3xpu.ref` variants and its own image
+(`ghcr.io/0xsero/exl3xpu@sha256:21412bdd7535e9c653eeb3d099dce3bc79a83d440def2cd9556111c79c870fa8`), which the
+`qwen38-27b-exl3-4bpw-arcb70-vllm-exl3xpu-tp1` registry recipe pins.
+
 EXL3 ([exllamav3](https://github.com/turboderp-org/exllamav3) trellis quantization) inference on Intel Arc
 Battlemage GPUs, as a vLLM plugin. Native ESIMD kernels decode the trellis bit-exactly and run the GEMMs
 on the Xe2 vector and XMX units; vLLM supplies scheduling, paged KV cache, the GDN/attention kernels and the

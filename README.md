@@ -72,6 +72,15 @@ docker build -f xpu/docker/Dockerfile -t exl3xpu .
 
 CPU tests: `cd core && python -m pytest`.
 
+## exl3xpu
+
+`xpu/` is the standalone [exl3xpu](https://github.com/sybil-solutions/exl3xpu) repository folded in: the
+vLLM XPU plugin, ESIMD kernels, tests and benchmarks are the same files, and the two that differ here are the
+adapted ones — `tests/test_xpu_kernels.py` imports `trellis_core` instead of the standalone `exl3xpu.ref`, and
+`docker/Dockerfile` builds from this repository root so the image also carries `core/`. The standalone repository is
+archived (read-only, still fetchable by commit) and keeps the standalone variants, including the image
+`ghcr.io/0xsero/exl3xpu@sha256:21412bdd…` that the B70 registry recipe pins.
+
 ## Credits
 
 The EXL3 format and its maths are turboderp's ([ExLlamaV3](https://github.com/turboderp-org/exllamav3), MIT). The CUDA
