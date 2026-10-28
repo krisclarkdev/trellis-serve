@@ -116,12 +116,21 @@ class Exl3Config(QuantizationConfig):
                     sum(1 for k in self.storage if k.startswith("mtp.")))
 
     def _bits_for(self, prefix: str) -> int | None:
+
         parts = prefix.split(".")
         if "visual" in parts or "vision_tower" in parts:
             return None
         key = _norm_key(prefix)
         if key.endswith("output_gate_proj"):
             key = key[: -len("output_gate_proj")] + "gate_proj"
+        # DFlash drafter stores a single layer as layers.0, but vLLM names it
+        # after the target layer index (e.g. layers.52). Map back to layers.0.
+        if key.startswith("layers.") and key not in self.storage:
+            parts = key.split(".", 2)
+            if len(parts) == 3:
+                alt = "layers.0." + parts[2]
+                if alt in self.storage:
+                    key = alt
         if not self.storage:
             if key.endswith("in_proj_ba"):
                 return None
@@ -364,3 +373,49 @@ def register():
         from . import vllm_patches
         vllm_patches.apply_all()
     return None
+
+
+# ---------------------------------------------------------------------------
+# DFlash draft models: ensure EXL3 quantization is resolved for the drafter.
+# vLLM's get_draft_quant_config returns None when draft_model_config.quantization
+# is None, even if the checkpoint's hf_config declares quant_method="exl3".
+# Promote it so the Exl3Config is built and the drafter's linear layers are
+# quantized to match the EXL3 checkpoint.
+# ---------------------------------------------------------------------------
+try:
+    import vllm.model_executor.models.utils as _draft_utils
+
+    _orig_get_draft_quant_config = _draft_utils.get_draft_quant_config
+
+    def _patched_get_draft_quant_config(vllm_config):
+        try:
+            dmc = getattr(getattr(vllm_config, "speculative_config", None), "draft_model_config", None)
+            if dmc is not None and getattr(dmc, "quantization", None) is None:
+                hf = getattr(dmc, "hf_config", None)
+                qc = getattr(hf, "quantization_config", None) if hf is not None else None
+                if not isinstance(qc, dict):
+                    model_name = getattr(dmc, "model", None)
+                    if model_name:
+                        qpath = os.path.join(model_name, "quantization_config.json")
+                        if os.path.isfile(qpath):
+                            try:
+                                with open(qpath) as f:
+                                    qc = json.load(f)
+                            except Exception:
+                                qc = None
+                if isinstance(qc, dict) and qc.get("quant_method") == "exl3":
+                    dmc.quantization = "exl3"
+                    logger.info("exl3: promoted draft model quantization to exl3")
+        except Exception as e:
+            logger.warning("exl3: draft quantization promotion failed: %s", e)
+        _ret = _orig_get_draft_quant_config(vllm_config)
+        return _ret
+
+    _draft_utils.get_draft_quant_config = _patched_get_draft_quant_config
+    try:
+        import vllm.model_executor.models.qwen3_dflash as _qd
+        _qd.get_draft_quant_config = _patched_get_draft_quant_config
+    except Exception:
+        pass
+except Exception as e:
+    logger.warning("exl3: could not patch draft quantization resolution: %s", e)
