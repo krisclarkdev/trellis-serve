@@ -686,7 +686,7 @@ class DFlashQwen3Model(nn.Module):
                 if mapped in valid:
                     filtered.append((name, tensor))
                 else:
-                    logger.debug("Skipping weight %r (mapped to %r) not present in model", name, mapped)
+                    logger.warning("Skipping weight %r (mapped to %r) not present in model", name, mapped)
             weights = filtered
         loader = AutoWeightsLoader(self)
         return loader.load_weights(
