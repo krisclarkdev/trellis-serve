@@ -123,14 +123,24 @@ class Exl3Config(QuantizationConfig):
         key = _norm_key(prefix)
         if key.endswith("output_gate_proj"):
             key = key[: -len("output_gate_proj")] + "gate_proj"
-        # DFlash drafter stores a single layer as layers.0, but vLLM names it
-        # after the target layer index (e.g. layers.52). Map back to layers.0.
+        # DFlash/vLLM name layers after the target layer index (e.g. layers.52),
+        # but the EXL3 checkpoint stores them 0-based (layers.0). Map back.
         if key.startswith("layers.") and key not in self.storage:
             parts = key.split(".", 2)
             if len(parts) == 3:
-                alt = "layers.0." + parts[2]
-                if alt in self.storage:
-                    key = alt
+                try:
+                    idx = int(parts[1])
+                except ValueError:
+                    idx = None
+                start = getattr(self, "_start_layer_id", 0)
+                candidates = []
+                if idx is not None and start:
+                    candidates.append(f"layers.{idx - start}." + parts[2])
+                candidates.append("layers.0." + parts[2])
+                for alt in candidates:
+                    if alt in self.storage:
+                        key = alt
+                        break
         if not self.storage:
             if key.endswith("in_proj_ba"):
                 return None

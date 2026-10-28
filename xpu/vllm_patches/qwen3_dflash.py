@@ -376,9 +376,8 @@ class DFlashQwen3Model(nn.Module):
         self.config = vllm_config.speculative_config.draft_model_config.hf_config
         self.vocab_size = self.config.vocab_size
         self.quant_config = get_draft_quant_config(vllm_config)
-        import logging as _l
-        _l.getLogger('dbg').warning('STORAGE_KEYS: %s', list(getattr(self.quant_config, 'storage', {}).keys())[:10])
-        _l.getLogger('dbg').warning('QUANT_CONFIG: %s', self.quant_config)
+        if self.quant_config is not None:
+            setattr(self.quant_config, '_start_layer_id', start_layer_id)
 
         drafter_config = getattr(self.config, "eagle_config", {})
         drafter_config.update(getattr(self.config, "dflash_config", {}))
