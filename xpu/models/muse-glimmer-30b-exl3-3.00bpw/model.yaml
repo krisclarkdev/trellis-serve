@@ -21,7 +21,7 @@ vllm:
   speculative_config:
     method: dflash
     model: /mnt/exl3model/turboderp-muse-glimmer-30b-assistant-3bpw
-    num_speculative_tokens: 4
+    num_speculative_tokens: 15
   limit_mm_per_prompt: {image: 0, video: 0}
   compilation_config:
     cudagraph_mode: FULL_DECODE_ONLY
