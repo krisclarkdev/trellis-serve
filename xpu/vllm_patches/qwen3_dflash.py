@@ -672,6 +672,22 @@ class DFlashQwen3Model(nn.Module):
             yield name, loaded_weight
 
     def load_weights(self, weights: Iterable[tuple[str, torch.Tensor]]) -> set[str]:
+        # Drop checkpoint entries whose mapped name is not a registered
+        # parameter. Exl3 layers expose trellis/suh/svh (no weight), so a stray
+        # .weight key (or any other stale key) must not make AutoWeightsLoader
+        # raise "no module or parameter named ...".
+        if getattr(self, "quant_config", None) is not None:
+            valid = {n for n, _ in self.named_parameters()}
+            filtered = []
+            for name, tensor in weights:
+                mapped = self.hf_to_vllm_mapper.map_name(name)
+                if mapped is None:
+                continue
+            if mapped in valid:
+                filtered.append((name, tensor))
+            else:
+                logger.debug("Skipping weight %r (mapped to %r) not present in model", name, mapped)
+            weights = filtered
         loader = AutoWeightsLoader(self)
         return loader.load_weights(
             self._preprocess(weights), mapper=self.hf_to_vllm_mapper
