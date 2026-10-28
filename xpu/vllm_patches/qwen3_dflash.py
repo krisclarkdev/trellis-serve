@@ -682,11 +682,11 @@ class DFlashQwen3Model(nn.Module):
             for name, tensor in weights:
                 mapped = self.hf_to_vllm_mapper.map_name(name)
                 if mapped is None:
-                continue
-            if mapped in valid:
-                filtered.append((name, tensor))
-            else:
-                logger.debug("Skipping weight %r (mapped to %r) not present in model", name, mapped)
+                    continue
+                if mapped in valid:
+                    filtered.append((name, tensor))
+                else:
+                    logger.debug("Skipping weight %r (mapped to %r) not present in model", name, mapped)
             weights = filtered
         loader = AutoWeightsLoader(self)
         return loader.load_weights(
