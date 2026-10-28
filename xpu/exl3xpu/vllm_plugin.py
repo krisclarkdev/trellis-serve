@@ -120,6 +120,8 @@ class Exl3Config(QuantizationConfig):
         if "visual" in parts or "vision_tower" in parts:
             return None
         key = _norm_key(prefix)
+        if key.endswith("output_gate_proj"):
+            key = key[: -len("output_gate_proj")] + "gate_proj"
         if not self.storage:
             if key.endswith("in_proj_ba"):
                 return None
@@ -157,14 +159,24 @@ class Exl3LinearMethod(LinearMethodBase):
     def create_weights(self, layer, input_size_per_partition, output_partition_sizes, input_size,
                        output_size, params_dtype, **extra_weight_attrs):
         k = input_size_per_partition
-        n = sum(output_partition_sizes)
-        if k != input_size or n != (output_size if not isinstance(layer, ParallelLMHead) else n):
+        orig_sizes = list(output_partition_sizes)
+        if isinstance(layer, ParallelLMHead):
+            padded_sizes = [((s + 127) // 128) * 128 for s in orig_sizes]
+        else:
+            assert k % 128 == 0 and all(s % 128 == 0 for s in orig_sizes), \
+                f"exl3: dims must be multiples of 128 (k={k}, n={orig_sizes})"
+            padded_sizes = list(orig_sizes)
+        orig_n = sum(orig_sizes)
+        n = sum(padded_sizes)
+        if k != input_size or (not isinstance(layer, ParallelLMHead) and n != output_size):
             raise NotImplementedError("exl3: tensor parallel sharding not supported yet (use DP)")
-        assert k % 128 == 0 and all(s % 128 == 0 for s in output_partition_sizes), \
-            f"exl3: dims must be multiples of 128 (k={k}, n={output_partition_sizes})"
+        assert k % 128 == 0
         K = self.K
-        layer.exl3_sizes = list(output_partition_sizes)
-        layer.exl3_offsets = [sum(output_partition_sizes[:i]) for i in range(len(output_partition_sizes) + 1)]
+        layer.exl3_orig_sizes = orig_sizes
+        layer.exl3_sizes = padded_sizes
+        layer.exl3_orig_offsets = [sum(orig_sizes[:i]) for i in range(len(orig_sizes) + 1)]
+        layer.exl3_offsets = [sum(padded_sizes[:i]) for i in range(len(padded_sizes) + 1)]
+        layer.exl3_orig_n = orig_n
         layer.exl3_groups = set()
         layer.exl3_K = K
         layer.exl3_cb = self.cb
@@ -202,7 +214,16 @@ class Exl3LinearMethod(LinearMethodBase):
             s, a, b = self._range(layer, w, sid)
             assert w.dtype == torch.int16 and w.shape[-1] == param.shape[-1], \
                 f"exl3: trellis bits mismatch {tuple(w.shape)} vs {tuple(param.shape)}"
-            assert w.shape[1] * 16 == b - a and w.shape[0] == param.shape[0], (w.shape, a, b)
+            orig_a = layer.exl3_orig_offsets[s[0]]
+            orig_b = layer.exl3_orig_offsets[s[-1] + 1]
+            orig_width = orig_b - orig_a
+            padded_width = b - a
+            assert w.shape[1] * 16 in (orig_width, padded_width), (w.shape, orig_width, padded_width)
+            if w.shape[1] * 16 == orig_width and padded_width > orig_width:
+                pad_blocks = (padded_width - orig_width) // 16
+                w = torch.nn.functional.pad(w, (0, 0, 0, pad_blocks))
+            assert w.shape[1] * 16 == padded_width
+            assert w.shape[0] == param.shape[0], (w.shape, a, b)
             param.data[:, a // 16: b // 16].copy_(w)
             layer.exl3_groups.add(tuple(s))
         return f
@@ -216,7 +237,14 @@ class Exl3LinearMethod(LinearMethodBase):
 
     def _load_svh(self, layer):
         def f(param, w, sid=None):
-            _, a, b = self._range(layer, w, sid)
+            s, a, b = self._range(layer, w, sid)
+            orig_a = layer.exl3_orig_offsets[s[0]]
+            orig_b = layer.exl3_orig_offsets[s[-1] + 1]
+            orig_width = orig_b - orig_a
+            padded_width = b - a
+            if w.numel() == orig_width and padded_width > orig_width:
+                w = torch.nn.functional.pad(w, (0, padded_width - orig_width))
+            assert w.numel() in (orig_width, padded_width), (tuple(w.shape), orig_width, padded_width)
             param.data[a:b].copy_(w)
         return f
 
@@ -256,6 +284,8 @@ class Exl3LinearMethod(LinearMethodBase):
         else:
             y = ops._exl3_linear_py(x, layer.trellis, layer.suh, layer.svh, layer.exl3_shard_of_nb,
                                     layer.exl3_bounds, layer.exl3_K, layer.exl3_cb)
+        if hasattr(layer, "exl3_orig_n") and y.shape[-1] != layer.exl3_orig_n:
+            y = y[..., :layer.exl3_orig_n]
         if bias is not None:
             y = y + bias
         return y
