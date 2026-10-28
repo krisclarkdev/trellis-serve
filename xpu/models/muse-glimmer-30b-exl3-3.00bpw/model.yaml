@@ -12,16 +12,17 @@ vllm:
   max_model_len: 131072
   kv_cache_dtype: fp8
   gpu_memory_utilization: 0.85
-  max_num_seqs: 16
+  max_num_seqs: 32
   max_num_batched_tokens: 8192
   trust_remote_code: true
   enable_prefix_caching: true
   enable_auto_tool_choice: true
   tool_call_parser: muse_glimmer
   speculative_config:
-    method: dflash
+    method: ngram
     model: /mnt/exl3model/turboderp-muse-glimmer-30b-assistant-3bpw
-    num_speculative_tokens: 15
+    num_speculative_tokens: 4
+    prompt_lookup_max: 8
   limit_mm_per_prompt: {image: 0, video: 0}
   compilation_config:
     cudagraph_mode: FULL_DECODE_ONLY
