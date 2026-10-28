@@ -680,7 +680,7 @@ class DFlashQwen3Model(nn.Module):
             valid = {n for n, _ in self.named_parameters()}
             filtered = []
             for name, tensor in weights:
-                mapped = self.hf_to_vllm_mapper.map_name(name)
+                mapped = self.hf_to_vllm_mapper._map_name(name)
                 if mapped is None:
                     continue
                 if mapped in valid:
